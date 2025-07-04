@@ -9,7 +9,7 @@
   <header>
     <h1>Выбор машины (GTA 5 RP)</h1>
     <label>
-      Ваш ник: <input type="text" id="nickname" placeholder="Введите ник">
+      Ваш ник: <input type="text" id="username" placeholder="Введите ник">
     </label>
     <p id="status">Загрузка статуса...</p>
   </header>
@@ -17,34 +17,74 @@
   <main id="car-list">
     <!-- Машины будут загружены через JS -->
   </main>
-<input type="text" id="username" placeholder="Твой ник">
-<button id="claimBtn">Взять машину</button>
-<button id="releaseBtn">Отказаться</button>
-<p id="status"></p>
+
+  <div>
+    <button id="claimBtn">Взять машину</button>
+    <button id="releaseBtn">Отказаться</button>
+  </div>
 
   <script>
+    const usernameInput = document.getElementById("username");
+    const claimBtn = document.getElementById("claimBtn");
+    const releaseBtn = document.getElementById("releaseBtn");
     const statusEl = document.getElementById("status");
 
-    function updateStatus() {
-      fetch("/api/claim")
-        .then(res => res.json())
-        .then(data => {
-          if (data.taken) {
-            statusEl.textContent = `Машина занята: ${data.user}`;
-          } else {
-            statusEl.textContent = "Машина свободна";
-          }
-        })
-        .catch(() => {
-          statusEl.textContent = "Ошибка подключения к серверу";
-        });
+    async function checkStatus() {
+      try {
+        const res = await fetch("/api/claim");
+        const data = await res.json();
+        if (data.taken) {
+          statusEl.textContent = `Машина занята пользователем: ${data.user}`;
+        } else {
+          statusEl.textContent = "Машина свободна";
+        }
+      } catch (e) {
+        statusEl.textContent = "Ошибка подключения к серверу";
+      }
     }
 
-    // Запуск при загрузке и затем каждую секунду
-    updateStatus();
-    setInterval(updateStatus, 1000);
-  </script>
+    claimBtn.addEventListener("click", async () => {
+      const user = usernameInput.value.trim();
+      if (!user) return alert("Укажи ник!");
 
-  <script src="script.js"></script>
+      const res = await fetch("/api/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        statusEl.textContent = "Ты взял машину!";
+      } else {
+        alert(data.error);
+      }
+
+      checkStatus();
+    });
+
+    releaseBtn.addEventListener("click", async () => {
+      const user = usernameInput.value.trim();
+      if (!user) return alert("Укажи ник!");
+
+      const res = await fetch("/api/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        statusEl.textContent = "Ты отказался от машины.";
+      } else {
+        alert(data.error);
+      }
+
+      checkStatus();
+    });
+
+    setInterval(checkStatus, 3000);
+    checkStatus();
+  </script>
 </body>
 </html>
