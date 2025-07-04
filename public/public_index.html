@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>BMW M5 F90 - GTA 5 RP</title>
+<style>
+  body {
+    background: #222;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    padding: 20px;
+  }
+  img {
+    max-width: 300px;
+    border-radius: 10px;
+  }
+  #car-name {
+    margin: 10px 0;
+    font-size: 2em;
+    color: #bb86fc;
+  }
+  #status {
+    margin: 15px 0;
+    font-size: 1.2em;
+  }
+  #nickname {
+    padding: 5px 10px;
+    font-size: 1em;
+    width: 200px;
+    border-radius: 5px;
+    border: none;
+    margin-bottom: 10px;
+  }
+  button {
+    background: #bb86fc;
+    border: none;
+    color: #222;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  button:disabled {
+    background: #555;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+
+<img src="https://cdn.discordapp.com/attachments/112233445566778899/1234567890123456789/bmw_m5_f90.jpg" alt="BMW M5 F90" />
+<div id="car-name">BMW M5 F90</div>
+
+<input type="text" id="nickname" placeholder="Введите ваш ник" />
+
+<div id="status">Загрузка...</div>
+<button id="take-btn" style="display:none;">Взять машину</button>
+<button id="release-btn" style="display:none;">Отказаться</button>
+
+<script>
+  const nicknameInput = document.getElementById("nickname");
+  const statusDiv = document.getElementById("status");
+  const takeBtn = document.getElementById("take-btn");
+  const releaseBtn = document.getElementById("release-btn");
+
+  async function fetchClaim() {
+    const res = await fetch("/api/claim");
+    return res.json();
+  }
+
+  async function takeCar(user) {
+    const res = await fetch("/api/claim", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user }),
+    });
+    return res.json();
+  }
+
+  async function releaseCar(user) {
+    const res = await fetch("/api/release", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user }),
+    });
+    return res.json();
+  }
+
+  async function updateUI() {
+    const nick = nicknameInput.value.trim();
+    if (!nick) {
+      statusDiv.textContent = "Введите ваш ник для управления машиной.";
+      takeBtn.style.display = "none";
+      releaseBtn.style.display = "none";
+      return;
+    }
+
+    const claim = await fetchClaim();
+
+    if (claim.taken) {
+      statusDiv.textContent = `Машина занята игроком: ${claim.user}`;
+      if (claim.user === nick) {
+        takeBtn.style.display = "none";
+        releaseBtn.style.display = "inline-block";
+      } else {
+        takeBtn.style.display = "none";
+        releaseBtn.style.display = "none";
+      }
+    } else {
+      statusDiv.textContent = "Машина свободна!";
+      takeBtn.style.display = "inline-block";
+      releaseBtn.style.display = "none";
+    }
+  }
+
+  nicknameInput.addEventListener("input", updateUI);
+
+  takeBtn.addEventListener("click", async () => {
+    const nick = nicknameInput.value.trim();
+    if (!nick) return alert("Введите ник!");
+    const res = await takeCar(nick);
+    if (res.success) {
+      updateUI();
+    } else {
+      alert(res.error || "Ошибка при взятии машины");
+    }
+  });
+
+  releaseBtn.addEventListener("click", async () => {
+    const nick = nicknameInput.value.trim();
+    if (!nick) return alert("Введите ник!");
+    const res = await releaseCar(nick);
+    if (res.success) {
+      updateUI();
+    } else {
+      alert(res.error || "Ошибка при отказе от машины");
+    }
+  });
+
+  updateUI();
+
+  // Обновлять статус каждые 10 секунд, чтобы видеть актуальное состояние
+  setInterval(updateUI, 10000);
+</script>
+
+</body>
+</html>
