@@ -1,150 +1,164 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BMW M5 F90 - GTA 5 RP</title>
-<style>
-  body {
-    background: #222;
-    color: #eee;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-  }
-  img {
-    max-width: 300px;
-    border-radius: 10px;
-  }
-  #car-name {
-    margin: 10px 0;
-    font-size: 2em;
-    color: #bb86fc;
-  }
-  #status {
-    margin: 15px 0;
-    font-size: 1.2em;
-  }
-  #nickname {
-    padding: 5px 10px;
-    font-size: 1em;
-    width: 200px;
-    border-radius: 5px;
-    border: none;
-    margin-bottom: 10px;
-  }
-  button {
-    background: #bb86fc;
-    border: none;
-    color: #222;
-    padding: 10px 20px;
-    font-size: 1em;
-    cursor: pointer;
-    border-radius: 8px;
-    margin-top: 10px;
-  }
-  button:disabled {
-    background: #555;
-    cursor: not-allowed;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BMW M5 F90 - GTA 5 RP</title>
+  <style>
+    body {
+      background: #121212;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    img {
+      max-width: 90%;
+      max-height: 300px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 20px rgba(187, 134, 252, 0.4);
+    }
+    #car-name {
+      font-size: 2.2em;
+      color: #bb86fc;
+      margin-bottom: 10px;
+    }
+    #status {
+      margin: 10px 0;
+      font-size: 1.1em;
+      color: #ccc;
+    }
+    #nickname {
+      padding: 10px;
+      font-size: 1em;
+      width: 250px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      margin-bottom: 20px;
+      background-color: #1f1f1f;
+      color: #fff;
+    }
+    button {
+      background: #bb86fc;
+      color: #121212;
+      padding: 12px 24px;
+      font-size: 1em;
+      border: none;
+      border-radius: 10px;
+      margin: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s ease;
+    }
+    button:hover {
+      background: #9b6de9;
+      transform: scale(1.03);
+    }
+    button:disabled {
+      background: #444;
+      cursor: not-allowed;
+      color: #aaa;
+    }
+  </style>
 </head>
 <body>
 
-<img src="https://cdn.discordapp.com/attachments/112233445566778899/1234567890123456789/bmw_m5_f90.jpg" alt="BMW M5 F90" />
-<div id="car-name">BMW M5 F90</div>
+  <!-- Картинка машины -->
+  <img src="https://s3.iimg.su/s/03/nm87ykpGaRDnww9aBVJpUQd6oq4NBo3oDFOpwfcX.png" alt="BMW M5 F90" />
 
-<input type="text" id="nickname" placeholder="Введите ваш ник" />
+  <div id="car-name">BMW M5 F90</div>
 
-<div id="status">Загрузка...</div>
-<button id="take-btn" style="display:none;">Взять машину</button>
-<button id="release-btn" style="display:none;">Отказаться</button>
+  <input type="text" id="nickname" placeholder="Введите ваш ник" />
 
-<script>
-  const nicknameInput = document.getElementById("nickname");
-  const statusDiv = document.getElementById("status");
-  const takeBtn = document.getElementById("take-btn");
-  const releaseBtn = document.getElementById("release-btn");
+  <div id="status">Загрузка...</div>
+  <button id="take-btn" style="display:none;">Взять машину</button>
+  <button id="release-btn" style="display:none;">Отказаться</button>
 
-  async function fetchClaim() {
-    const res = await fetch("/api/claim");
-    return res.json();
-  }
+  <script>
+    const nicknameInput = document.getElementById("nickname");
+    const statusDiv = document.getElementById("status");
+    const takeBtn = document.getElementById("take-btn");
+    const releaseBtn = document.getElementById("release-btn");
 
-  async function takeCar(user) {
-    const res = await fetch("/api/claim", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user }),
-    });
-    return res.json();
-  }
-
-  async function releaseCar(user) {
-    const res = await fetch("/api/release", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user }),
-    });
-    return res.json();
-  }
-
-  async function updateUI() {
-    const nick = nicknameInput.value.trim();
-    if (!nick) {
-      statusDiv.textContent = "Введите ваш ник для управления машиной.";
-      takeBtn.style.display = "none";
-      releaseBtn.style.display = "none";
-      return;
+    async function fetchClaim() {
+      const res = await fetch("/api/claim");
+      return res.json();
     }
 
-    const claim = await fetchClaim();
+    async function takeCar(user) {
+      const res = await fetch("/api/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
+      return res.json();
+    }
 
-    if (claim.taken) {
-      statusDiv.textContent = `Машина занята игроком: ${claim.user}`;
-      if (claim.user === nick) {
-        takeBtn.style.display = "none";
-        releaseBtn.style.display = "inline-block";
-      } else {
+    async function releaseCar(user) {
+      const res = await fetch("/api/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
+      return res.json();
+    }
+
+    async function updateUI() {
+      const nick = nicknameInput.value.trim();
+      if (!nick) {
+        statusDiv.textContent = "Введите ваш ник для управления машиной.";
         takeBtn.style.display = "none";
         releaseBtn.style.display = "none";
+        return;
       }
-    } else {
-      statusDiv.textContent = "Машина свободна!";
-      takeBtn.style.display = "inline-block";
-      releaseBtn.style.display = "none";
+
+      const claim = await fetchClaim();
+
+      if (claim.taken) {
+        statusDiv.textContent = `Машина занята игроком: ${claim.user}`;
+        if (claim.user === nick) {
+          takeBtn.style.display = "none";
+          releaseBtn.style.display = "inline-block";
+        } else {
+          takeBtn.style.display = "none";
+          releaseBtn.style.display = "none";
+        }
+      } else {
+        statusDiv.textContent = "Машина свободна!";
+        takeBtn.style.display = "inline-block";
+        releaseBtn.style.display = "none";
+      }
     }
-  }
 
-  nicknameInput.addEventListener("input", updateUI);
+    nicknameInput.addEventListener("input", updateUI);
 
-  takeBtn.addEventListener("click", async () => {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert("Введите ник!");
-    const res = await takeCar(nick);
-    if (res.success) {
-      updateUI();
-    } else {
-      alert(res.error || "Ошибка при взятии машины");
-    }
-  });
+    takeBtn.addEventListener("click", async () => {
+      const nick = nicknameInput.value.trim();
+      if (!nick) return alert("Введите ник!");
+      const res = await takeCar(nick);
+      if (res.success) {
+        updateUI();
+      } else {
+        alert(res.error || "Ошибка при взятии машины");
+      }
+    });
 
-  releaseBtn.addEventListener("click", async () => {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert("Введите ник!");
-    const res = await releaseCar(nick);
-    if (res.success) {
-      updateUI();
-    } else {
-      alert(res.error || "Ошибка при отказе от машины");
-    }
-  });
+    releaseBtn.addEventListener("click", async () => {
+      const nick = nicknameInput.value.trim();
+      if (!nick) return alert("Введите ник!");
+      const res = await releaseCar(nick);
+      if (res.success) {
+        updateUI();
+      } else {
+        alert(res.error || "Ошибка при отказе от машины");
+      }
+    });
 
-  updateUI();
-
-  // Обновлять статус каждые 10 секунд, чтобы видеть актуальное состояние
-  setInterval(updateUI, 10000);
-</script>
+    updateUI();
+    setInterval(updateUI, 10000);
+  </script>
 
 </body>
 </html>
