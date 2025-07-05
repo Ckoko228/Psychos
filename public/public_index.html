@@ -4,13 +4,14 @@
   <meta charset="UTF-8" />
   <title>GTA Машина</title>
 </head>
+<link rel="stylesheet" href="styles.css" />
 <body>
   <h1>Статус машины</h1>
   <div id="status">Загрузка...</div>
   <input id="username" placeholder="Ваше имя">
   <button onclick="claim()">Взять</button>
   <button onclick="release()">Отказаться</button>
-
+<img src="gta5-car-site/public/img/image.png" alt="Машина" class="car-image" />
   <script>
     const express = require("express");
 const http = require("http");
@@ -109,7 +110,11 @@ server.listen(PORT, "0.0.0.0", () => {
       alert(JSON.stringify(data));
       getStatus();
     }
-
+const car = {
+  id: 1,
+  name: "BMW M5 F90",
+  img: "https://s3.iimg.su/s/03/nm87ykpGaRDnww9aBVJpUQd6oq4NBo3oDFOpwfcX.png" 
+};
     getStatus();
     setInterval(getStatus, 5000);
   </script>
