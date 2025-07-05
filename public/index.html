@@ -11,39 +11,11 @@
     <label>
       Ваш ник: <input type="text" id="nickname" placeholder="Введите ник">
     </label>
-    <p id="status">Загрузка статуса...</p>
   </header>
 
   <main id="car-list">
     <!-- Машины будут загружены через JS -->
   </main>
-<input type="text" id="username" placeholder="Твой ник">
-<button id="claimBtn">Взять машину</button>
-<button id="releaseBtn">Отказаться</button>
-<p id="status"></p>
-
-  <script>
-    const statusEl = document.getElementById("status");
-
-    function updateStatus() {
-      fetch("/api/claim")
-        .then(res => res.json())
-        .then(data => {
-          if (data.taken) {
-            statusEl.textContent = `Машина занята: ${data.user}`;
-          } else {
-            statusEl.textContent = "Машина свободна";
-          }
-        })
-        .catch(() => {
-          statusEl.textContent = "Ошибка подключения к серверу";
-        });
-    }
-
-    // Запуск при загрузке и затем каждую секунду
-    updateStatus();
-    setInterval(updateStatus, 1000);
-  </script>
 
   <script src="script.js"></script>
 </body>
