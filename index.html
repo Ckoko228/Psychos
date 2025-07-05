@@ -1,150 +1,90 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BMW M5 F90 - GTA 5 RP</title>
-<style>
-  body {
-    background: #222;
-    color: #eee;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-  }
-  img {
-    max-width: 300px;
-    border-radius: 10px;
-  }
-  #car-name {
-    margin: 10px 0;
-    font-size: 2em;
-    color: #bb86fc;
-  }
-  #status {
-    margin: 15px 0;
-    font-size: 1.2em;
-  }
-  #nickname {
-    padding: 5px 10px;
-    font-size: 1em;
-    width: 200px;
-    border-radius: 5px;
-    border: none;
-    margin-bottom: 10px;
-  }
-  button {
-    background: #bb86fc;
-    border: none;
-    color: #222;
-    padding: 10px 20px;
-    font-size: 1em;
-    cursor: pointer;
-    border-radius: 8px;
-    margin-top: 10px;
-  }
-  button:disabled {
-    background: #555;
-    cursor: not-allowed;
-  }
-</style>
+  <meta charset="UTF-8">
+  <title>Машины GTA 5 RP</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <header>
+    <h1>Выбор машины (GTA 5 RP)</h1>
+    <label>
+      Ваш ник: <input type="text" id="username" placeholder="Введите ник">
+    </label>
+    <p id="status">Загрузка статуса...</p>
+  </header>
 
-<img src="https://cdn.discordapp.com/attachments/112233445566778899/1234567890123456789/bmw_m5_f90.jpg" alt="BMW M5 F90" />
-<div id="car-name">BMW M5 F90</div>
+  <main id="car-list">
+    <!-- Машины будут загружены через JS -->
+  </main>
 
-<input type="text" id="nickname" placeholder="Введите ваш ник" />
+  <div>
+    <button id="claimBtn">Взять машину</button>
+    <button id="releaseBtn">Отказаться</button>
+  </div>
 
-<div id="status">Загрузка...</div>
-<button id="take-btn" style="display:none;">Взять машину</button>
-<button id="release-btn" style="display:none;">Отказаться</button>
+  <script>
+    const usernameInput = document.getElementById("username");
+    const claimBtn = document.getElementById("claimBtn");
+    const releaseBtn = document.getElementById("releaseBtn");
+    const statusEl = document.getElementById("status");
 
-<script>
-  const nicknameInput = document.getElementById("nickname");
-  const statusDiv = document.getElementById("status");
-  const takeBtn = document.getElementById("take-btn");
-  const releaseBtn = document.getElementById("release-btn");
-
-  async function fetchClaim() {
-    const res = await fetch("/api/claim");
-    return res.json();
-  }
-
-  async function takeCar(user) {
-    const res = await fetch("/api/claim", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user }),
-    });
-    return res.json();
-  }
-
-  async function releaseCar(user) {
-    const res = await fetch("/api/release", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user }),
-    });
-    return res.json();
-  }
-
-  async function updateUI() {
-    const nick = nicknameInput.value.trim();
-    if (!nick) {
-      statusDiv.textContent = "Введите ваш ник для управления машиной.";
-      takeBtn.style.display = "none";
-      releaseBtn.style.display = "none";
-      return;
-    }
-
-    const claim = await fetchClaim();
-
-    if (claim.taken) {
-      statusDiv.textContent = `Машина занята игроком: ${claim.user}`;
-      if (claim.user === nick) {
-        takeBtn.style.display = "none";
-        releaseBtn.style.display = "inline-block";
-      } else {
-        takeBtn.style.display = "none";
-        releaseBtn.style.display = "none";
+    async function checkStatus() {
+      try {
+        const res = await fetch("/api/claim");
+        const data = await res.json();
+        if (data.taken) {
+          statusEl.textContent = `Машина занята пользователем: ${data.user}`;
+        } else {
+          statusEl.textContent = "Машина свободна";
+        }
+      } catch (e) {
+        statusEl.textContent = "Ошибка подключения к серверу";
       }
-    } else {
-      statusDiv.textContent = "Машина свободна!";
-      takeBtn.style.display = "inline-block";
-      releaseBtn.style.display = "none";
     }
-  }
 
-  nicknameInput.addEventListener("input", updateUI);
+    claimBtn.addEventListener("click", async () => {
+      const user = usernameInput.value.trim();
+      if (!user) return alert("Укажи ник!");
 
-  takeBtn.addEventListener("click", async () => {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert("Введите ник!");
-    const res = await takeCar(nick);
-    if (res.success) {
-      updateUI();
-    } else {
-      alert(res.error || "Ошибка при взятии машины");
-    }
-  });
+      const res = await fetch("/api/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
 
-  releaseBtn.addEventListener("click", async () => {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert("Введите ник!");
-    const res = await releaseCar(nick);
-    if (res.success) {
-      updateUI();
-    } else {
-      alert(res.error || "Ошибка при отказе от машины");
-    }
-  });
+      const data = await res.json();
+      if (data.success) {
+        statusEl.textContent = "Ты взял машину!";
+      } else {
+        alert(data.error);
+      }
 
-  updateUI();
+      checkStatus();
+    });
 
-  // Обновлять статус каждые 10 секунд, чтобы видеть актуальное состояние
-  setInterval(updateUI, 10000);
-</script>
+    releaseBtn.addEventListener("click", async () => {
+      const user = usernameInput.value.trim();
+      if (!user) return alert("Укажи ник!");
 
+      const res = await fetch("/api/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        statusEl.textContent = "Ты отказался от машины.";
+      } else {
+        alert(data.error);
+      }
+
+      checkStatus();
+    });
+
+    setInterval(checkStatus, 3000);
+    checkStatus();
+  </script>
 </body>
 </html>
