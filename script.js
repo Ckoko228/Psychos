@@ -4,75 +4,68 @@ const car = {
   img: "https://s3.iimg.su/s/03/nm87ykpGaRDnww9aBVJpUQd6oq4NBo3oDFOpwfcX.png" 
 };
 
-const COOLDOWN_MS = 90 * 60 * 1000; // 1.5 часа в миллисекундах
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
-// Сохраняем данные в localStorage
-function saveClaim(data) {
-  localStorage.setItem("claim", JSON.stringify(data));
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+app.use(express.static("public"));
+
+let claim = null;
+const COOLDOWN_MS = 90 * 60 * 1000;
+
+function isCooldownExpired() {
+  if (!claim) return true;
+  return (Date.now() - claim.timestamp) > COOLDOWN_MS;
 }
 
-// Загружаем данные из localStorage
-function loadClaim() {
-  return JSON.parse(localStorage.getItem("claim"));
-}
-
-// Проверяем, истек ли таймер
-function isCooldownExpired(timestamp) {
-  if (!timestamp) return true;
-  return (Date.now() - timestamp) > COOLDOWN_MS;
-}
-
-function renderCar() {
-  const container = document.getElementById("car-list");
-  const nickname = document.getElementById("nickname").value.trim();
-  let claim = loadClaim();
-
-  // Если время аренды истекло — освобождаем машину
-  if (claim && isCooldownExpired(claim.timestamp)) {
-    claim = null;
-    localStorage.removeItem("claim");
-  }
-
-  container.innerHTML = "";
-
-  const carDiv = document.createElement("div");
-  carDiv.className = "car";
-
-  let innerHTML = `
-    <img src="${car.img}" alt="${car.name}" />
-    <h3>${car.name}</h3>
-  `;
-
-  if (claim) {
-    innerHTML += `<p class="taken-by">🚫 Занято: <b>${claim.user}</b></p>`;
-
-    if (nickname && nickname === claim.user) {
-      innerHTML += `<button id="release-btn">Отказаться</button>`;
-    }
+app.get("/api/claim", (req, res) => {
+  if (claim && !isCooldownExpired()) {
+    res.json({ taken: true, user: claim.user });
   } else {
-    innerHTML += `<button id="take-btn">Взять</button>`;
+    claim = null;
+    res.json({ taken: false });
+  }
+});
+
+app.post("/api/claim", (req, res) => {
+  const { user } = req.body;
+  if (!user) return res.status(400).json({ error: "Нужно указать user" });
+
+  if (claim && !isCooldownExpired()) {
+    return res.status(400).json({ error: "Машина уже занята" });
   }
 
-  carDiv.innerHTML = innerHTML;
-  container.appendChild(carDiv);
+  claim = { user, timestamp: Date.now() };
 
-  if (!claim) {
-    document.getElementById("take-btn").addEventListener("click", () => {
-      const nicknameNow = document.getElementById("nickname").value.trim();
-      if (!nicknameNow) {
-        alert("Пожалуйста, введите ваш ник!");
-        return;
-      }
-      saveClaim({ user: nicknameNow, timestamp: Date.now() });
-      renderCar();
-    });
-  } else if (nickname && nickname === claim.user) {
-    document.getElementById("release-btn").addEventListener("click", () => {
-      localStorage.removeItem("claim");
-      renderCar();
-    });
+  // Рассылаем всем клиентам обновление
+  io.emit("claimUpdate", { taken: true, user: claim.user });
+
+  res.json({ success: true });
+});
+
+app.post("/api/release", (req, res) => {
+  const { user } = req.body;
+  if (!user) return res.status(400).json({ error: "Нужно указать user" });
+
+  if (!claim || claim.user !== user) {
+    return res.status(400).json({ error: "Ты не владелец машины" });
   }
-}
 
-document.getElementById("nickname").addEventListener("input", renderCar);
-document.addEventListener("DOMContentLoaded", renderCar);
+  claim = null;
+
+  // Рассылаем всем клиентам обновление
+  io.emit("claimUpdate", { taken: false });
+
+  res.json({ success: true });
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server started on port ${PORT}`);
+});

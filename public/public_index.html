@@ -1,150 +1,117 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>BMW M5 F90 - GTA 5 RP</title>
-<style>
-  body {
-    background: #222;
-    color: #eee;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding: 20px;
-  }
-  img {
-    max-width: 300px;
-    border-radius: 10px;
-  }
-  #car-name {
-    margin: 10px 0;
-    font-size: 2em;
-    color: #bb86fc;
-  }
-  #status {
-    margin: 15px 0;
-    font-size: 1.2em;
-  }
-  #nickname {
-    padding: 5px 10px;
-    font-size: 1em;
-    width: 200px;
-    border-radius: 5px;
-    border: none;
-    margin-bottom: 10px;
-  }
-  button {
-    background: #bb86fc;
-    border: none;
-    color: #222;
-    padding: 10px 20px;
-    font-size: 1em;
-    cursor: pointer;
-    border-radius: 8px;
-    margin-top: 10px;
-  }
-  button:disabled {
-    background: #555;
-    cursor: not-allowed;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>GTA Машина</title>
 </head>
 <body>
+  <h1>Статус машины</h1>
+  <div id="status">Загрузка...</div>
+  <input id="username" placeholder="Ваше имя">
+  <button onclick="claim()">Взять</button>
+  <button onclick="release()">Отказаться</button>
 
-<img src="https://cdn.discordapp.com/attachments/112233445566778899/1234567890123456789/bmw_m5_f90.jpg" alt="BMW M5 F90" />
-<div id="car-name">BMW M5 F90</div>
+  <script>
+    const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
 
-<input type="text" id="nickname" placeholder="Введите ваш ник" />
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
-<div id="status">Загрузка...</div>
-<button id="take-btn" style="display:none;">Взять машину</button>
-<button id="release-btn" style="display:none;">Отказаться</button>
+const PORT = process.env.PORT || 3000;
 
-<script>
-  const nicknameInput = document.getElementById("nickname");
-  const statusDiv = document.getElementById("status");
-  const takeBtn = document.getElementById("take-btn");
-  const releaseBtn = document.getElementById("release-btn");
+app.use(express.json());
+app.use(express.static("public"));
 
-  async function fetchClaim() {
-    const res = await fetch("/api/claim");
-    return res.json();
+let claim = null;
+const COOLDOWN_MS = 90 * 60 * 1000;
+
+function isCooldownExpired() {
+  if (!claim) return true;
+  return (Date.now() - claim.timestamp) > COOLDOWN_MS;
+}
+
+app.get("/api/claim", (req, res) => {
+  if (claim && !isCooldownExpired()) {
+    res.json({ taken: true, user: claim.user });
+  } else {
+    claim = null;
+    res.json({ taken: false });
+  }
+});
+
+app.post("/api/claim", (req, res) => {
+  const { user } = req.body;
+  if (!user) return res.status(400).json({ error: "Нужно указать user" });
+
+  if (claim && !isCooldownExpired()) {
+    return res.status(400).json({ error: "Машина уже занята" });
   }
 
-  async function takeCar(user) {
-    const res = await fetch("/api/claim", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user }),
-    });
-    return res.json();
+  claim = { user, timestamp: Date.now() };
+
+  // Рассылаем всем клиентам обновление
+  io.emit("claimUpdate", { taken: true, user: claim.user });
+
+  res.json({ success: true });
+});
+
+app.post("/api/release", (req, res) => {
+  const { user } = req.body;
+  if (!user) return res.status(400).json({ error: "Нужно указать user" });
+
+  if (!claim || claim.user !== user) {
+    return res.status(400).json({ error: "Ты не владелец машины" });
   }
 
-  async function releaseCar(user) {
-    const res = await fetch("/api/release", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user }),
-    });
-    return res.json();
-  }
+  claim = null;
 
-  async function updateUI() {
-    const nick = nicknameInput.value.trim();
-    if (!nick) {
-      statusDiv.textContent = "Введите ваш ник для управления машиной.";
-      takeBtn.style.display = "none";
-      releaseBtn.style.display = "none";
-      return;
+  // Рассылаем всем клиентам обновление
+  io.emit("claimUpdate", { taken: false });
+
+  res.json({ success: true });
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server started on port ${PORT}`);
+});
+
+    async function getStatus() {
+      const res = await fetch("/api/claim");
+      const data = await res.json();
+      document.getElementById("status").textContent = data.taken
+        ? `Машина занята пользователем: ${data.user}`
+        : "Машина свободна";
     }
 
-    const claim = await fetchClaim();
-
-    if (claim.taken) {
-      statusDiv.textContent = `Машина занята игроком: ${claim.user}`;
-      if (claim.user === nick) {
-        takeBtn.style.display = "none";
-        releaseBtn.style.display = "inline-block";
-      } else {
-        takeBtn.style.display = "none";
-        releaseBtn.style.display = "none";
-      }
-    } else {
-      statusDiv.textContent = "Машина свободна!";
-      takeBtn.style.display = "inline-block";
-      releaseBtn.style.display = "none";
+    async function claim() {
+      const user = document.getElementById("username").value;
+      const res = await fetch("/api/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user })
+      });
+      const data = await res.json();
+      alert(JSON.stringify(data));
+      getStatus();
     }
-  }
 
-  nicknameInput.addEventListener("input", updateUI);
-
-  takeBtn.addEventListener("click", async () => {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert("Введите ник!");
-    const res = await takeCar(nick);
-    if (res.success) {
-      updateUI();
-    } else {
-      alert(res.error || "Ошибка при взятии машины");
+    async function release() {
+      const user = document.getElementById("username").value;
+      const res = await fetch("/api/release", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user })
+      });
+      const data = await res.json();
+      alert(JSON.stringify(data));
+      getStatus();
     }
-  });
 
-  releaseBtn.addEventListener("click", async () => {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert("Введите ник!");
-    const res = await releaseCar(nick);
-    if (res.success) {
-      updateUI();
-    } else {
-      alert(res.error || "Ошибка при отказе от машины");
-    }
-  });
-
-  updateUI();
-
-  // Обновлять статус каждые 10 секунд, чтобы видеть актуальное состояние
-  setInterval(updateUI, 10000);
-</script>
-
+    getStatus();
+    setInterval(getStatus, 5000);
+  </script>
 </body>
 </html>

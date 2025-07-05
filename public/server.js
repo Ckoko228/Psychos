@@ -1,21 +1,24 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static("public")); // папка для фронтенда
+app.use(express.static("public"));
 
-// Храним, кто взял машину (только одна машина)
 let claim = null;
-const COOLDOWN_MS = 90 * 60 * 1000; // 1.5 часа
+const COOLDOWN_MS = 90 * 60 * 1000;
 
-// Проверка таймаута
 function isCooldownExpired() {
   if (!claim) return true;
   return (Date.now() - claim.timestamp) > COOLDOWN_MS;
 }
 
-// API получить состояние машины
 app.get("/api/claim", (req, res) => {
   if (claim && !isCooldownExpired()) {
     res.json({ taken: true, user: claim.user });
@@ -25,7 +28,6 @@ app.get("/api/claim", (req, res) => {
   }
 });
 
-// API взять машину
 app.post("/api/claim", (req, res) => {
   const { user } = req.body;
   if (!user) return res.status(400).json({ error: "Нужно указать user" });
@@ -35,10 +37,13 @@ app.post("/api/claim", (req, res) => {
   }
 
   claim = { user, timestamp: Date.now() };
+
+  // Рассылаем всем клиентам обновление
+  io.emit("claimUpdate", { taken: true, user: claim.user });
+
   res.json({ success: true });
 });
 
-// API отказаться от машины
 app.post("/api/release", (req, res) => {
   const { user } = req.body;
   if (!user) return res.status(400).json({ error: "Нужно указать user" });
@@ -48,10 +53,13 @@ app.post("/api/release", (req, res) => {
   }
 
   claim = null;
+
+  // Рассылаем всем клиентам обновление
+  io.emit("claimUpdate", { taken: false });
+
   res.json({ success: true });
 });
 
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log(`Server started at http://localhost:${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server started on port ${PORT}`);
 });
