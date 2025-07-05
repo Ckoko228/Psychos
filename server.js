@@ -3,7 +3,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use(express.static("public")); // папка для фронтенда
+app.use(express.static("public")); // Папка для фронтенда
 
 // Храним, кто взял машину (только одна машина)
 let claim = null;
@@ -51,7 +51,7 @@ app.post("/api/release", (req, res) => {
   res.json({ success: true });
 });
 
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log(`Server started at http://localhost:${PORT}`);
+// Запуск сервера на 0.0.0.0 и порту Render
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server started on port ${PORT}`);
 });

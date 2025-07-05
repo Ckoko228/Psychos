@@ -1,15 +1,13 @@
 {
-  "name": "gta5-car-site",
+  "name": "psychos",
   "version": "1.0.0",
-  "description": "GTA 5 RP сайт с отображением занятых машин",
-  "main": "server.js",
+  "main": "script.js",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
+  "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^5.1.0"
-  }
+  "description": ""
 }
